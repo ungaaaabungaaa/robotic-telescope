@@ -1,0 +1,39 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "robotic-telescope-lab"
+version = "0.1.0"
+description = "Offline observing plans and an explicit ideal telescope-mount simulator."
+readme = "README.md"
+requires-python = ">=3.12"
+license = "MIT"
+authors = [{name = "Syed Abdul Muqeeth"}]
+dependencies = ["numpy>=2,<3", "astropy>=8.0.2,<8.1", "astropy-iers-data==0.2026.10.19.0.52.1", "matplotlib>=3.11,<3.12"]
+
+[project.optional-dependencies]
+dev = ["pytest>=8,<10", "pytest-cov>=6,<8", "ruff>=0.9,<1", "build>=1.2,<2"]
+
+[project.scripts]
+telescope-lab = "robotic_telescope.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+robotic_telescope = ["resources/*.json"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F", "I", "UP"]
+
+[tool.coverage.run]
+source = ["robotic_telescope"]

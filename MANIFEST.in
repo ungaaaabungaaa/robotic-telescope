@@ -1,0 +1,5 @@
+include requirements-benchmark.txt CONTRIBUTING.md SECURITY.md CHANGELOG.md NOTICE.md
+recursive-include docs *.md *.json *.png
+recursive-include demo *.json *.csv *.html *.png
+recursive-include tests *.py
+recursive-include tools *.py
