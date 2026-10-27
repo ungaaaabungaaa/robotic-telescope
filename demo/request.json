@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "observer": {"latitude_deg": 12.9716, "longitude_deg": 77.5946, "height_m": 920},
+  "start_utc": "2025-01-15T14:00:00Z",
+  "duration_seconds": 21600,
+  "step_seconds": 60,
+  "constraints": {"min_altitude_deg": 20, "max_altitude_deg": 85, "max_sun_altitude_deg": -12, "min_sun_separation_deg": 30},
+  "targets": [
+    {"id": "M31", "ra_deg": 10.68458, "dec_deg": 41.26917, "source": "Fixed ICRS example: https://docs.astropy.org/en/stable/coordinates/"},
+    {"id": "M33", "ra_deg": 23.46206906, "dec_deg": 30.66017511, "source": "Fixed ICRS example: https://docs.astropy.org/en/stable/coordinates/example_gallery_plot_obs_planning.html"},
+    {"id": "M42", "ra_deg": 83.82, "dec_deg": -5.3875, "source": "Rounded HII-region centroid (ICRS, catalog epoch J2000): https://simbad.unistra.fr/simbad/sim-id?Ident=M42"}
+  ]
+}
