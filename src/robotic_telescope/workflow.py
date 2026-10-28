@@ -12,7 +12,7 @@ import numpy as np
 
 from . import __version__
 from .mount import simulate
-from .pointing import RESOURCES, calculate_plan, load_request, validate_request
+from .pointing import RESOURCES, calculate_plan, horizon_floor, load_request, validate_request
 
 
 def save_json(path, value):
@@ -48,6 +48,17 @@ def plot_plan(output, request, plan):
         color = colors[index % len(colors)]
         mask = np.array(target["eligible"])
         ax.plot(hours, target["altitude_deg"], color=color, lw=1, alpha=0.45)
+        if request["constraints"].get("horizon_sectors"):
+            ax.plot(
+                hours,
+                np.maximum(
+                    request["constraints"]["min_altitude_deg"],
+                    horizon_floor(target["azimuth_deg"], request["constraints"]),
+                ),
+                color=color,
+                ls=":",
+                label=target["id"] + " supplied horizon floor",
+            )
         ax.scatter(
             hours[mask],
             np.array(target["altitude_deg"])[mask],
@@ -132,6 +143,8 @@ def write_report(output, metrics, request=None, plan=None):
     detail = ""
     if plan is not None:
         detail += f"<p>UTC start: <b>{html.escape(request['start_utc'])}</b>. WGS84 observer: {request['observer']['latitude_deg']}° latitude, {request['observer']['longitude_deg']}° east longitude, {request['observer']['height_m']} m assumed height. Pressure 0 hPa; no refraction.</p>"
+        if request["constraints"].get("horizon_sectors"):
+            detail += "<p>Supplied horizon sectors raise the minimum altitude at each sampled azimuth. Overlaps use the highest floor. These are declared assumptions, not surveyed terrain or a safe slew path.</p>"
         detail += "<table><caption>Sampled target eligibility</caption><thead><tr><th>Target</th><th>Eligible / samples</th><th>Adjacent eligible span</th><th>Maximum eligible altitude</th></tr></thead><tbody>"
         for target in plan["targets"]:
             altitude = target["max_eligible_altitude_deg"]

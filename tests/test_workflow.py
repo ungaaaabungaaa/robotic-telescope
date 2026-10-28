@@ -37,6 +37,26 @@ class WorkflowTests(unittest.TestCase):
             with self.assertRaises(FileExistsError):
                 export_demo(out)
 
+    def test_custom_horizon_masks_export_reasons_and_keep_sample_denominators(self):
+        request = copy.deepcopy(DEMO_REQUEST)
+        request["duration_seconds"] = 600
+        request["constraints"]["horizon_sectors"] = [
+            {"start_azimuth_deg": 0, "end_azimuth_deg": 180, "min_altitude_deg": 85},
+            {"start_azimuth_deg": 180, "end_azimuth_deg": 359.999999, "min_altitude_deg": 85},
+        ]
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory) / "masked"
+            export_plan(output, request, json.dumps(request).encode())
+            plan = json.loads((output / "plan.json").read_text())
+            for target in plan["targets"]:
+                self.assertEqual(target["total_samples"], 11)
+                self.assertEqual(target["eligible_samples"], 0)
+                self.assertEqual(target["eligible_adjacent_span_seconds"], 0)
+                self.assertEqual(target["rejection_counts"]["below_horizon_mask"], 11)
+            self.assertIn("below_horizon_mask", (output / "pointing.csv").read_text())
+            self.assertIn("Supplied horizon sectors", (output / "index.html").read_text())
+            self.assertEqual(json.loads((output / "request.json").read_text()), request)
+
     def test_custom_plan_and_cli_errors_leave_clear_file_boundary(self):
         with tempfile.TemporaryDirectory() as d:
             root = Path(d)

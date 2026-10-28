@@ -12,7 +12,9 @@ from robotic_telescope.pointing import (
     coordinates,
     load_request,
     sampled_windows,
+    validate_request,
     visibility,
+    visibility_conditions,
 )
 
 
@@ -83,6 +85,56 @@ class PointingTests(unittest.TestCase):
             rule,
         )
         self.assertEqual(mask.tolist(), [True, True, False, False, False, False, False])
+
+    def test_horizon_sectors_wrap_boundaries_and_overlap_use_the_highest_floor(self):
+        rule = {
+            **DEMO_REQUEST["constraints"],
+            "horizon_sectors": [
+                {"start_azimuth_deg": 350, "end_azimuth_deg": 10, "min_altitude_deg": 40},
+                {"start_azimuth_deg": 0, "end_azimuth_deg": 20, "min_altitude_deg": 50},
+            ],
+        }
+        mask = visibility(
+            np.array([40, 40, 49, 50, 20, 20, 40, 50]),
+            np.full(8, -20),
+            np.full(8, 50),
+            rule,
+            azimuth=np.array([350, 355, 0, 10, 21, 349, 5, np.nan]),
+        )
+        self.assertEqual(mask.tolist(), [True, True, False, True, True, True, False, False])
+
+    def test_horizon_rejection_is_not_reported_outside_declared_sectors(self):
+        rule = {
+            **DEMO_REQUEST["constraints"],
+            "horizon_sectors": [
+                {"start_azimuth_deg": 350, "end_azimuth_deg": 10, "min_altitude_deg": 40}
+            ],
+        }
+        conditions = visibility_conditions(
+            np.array([10]), np.array([-20]), np.array([50]), rule, np.array([180])
+        )
+        self.assertTrue(conditions["below_min_altitude"][0])
+        self.assertFalse(conditions["below_horizon_mask"][0])
+
+    def test_horizon_sector_schema_is_bounded_and_strict(self):
+        sector = {"start_azimuth_deg": 350, "end_azimuth_deg": 10, "min_altitude_deg": 40}
+        invalid = [None, [sector] * 17, [{}], [{**sector, "unknown": 0}]]
+        for change in [
+            {"start_azimuth_deg": 360},
+            {"end_azimuth_deg": 350},
+            {"min_altitude_deg": 86},
+            {"min_altitude_deg": True},
+            {"end_azimuth_deg": float("nan")},
+        ]:
+            invalid.append([{**sector, **change}])
+        for sectors in invalid:
+            request = copy.deepcopy(DEMO_REQUEST)
+            request["constraints"]["horizon_sectors"] = sectors
+            with self.assertRaises(ValueError):
+                validate_request(request)
+        request = copy.deepcopy(DEMO_REQUEST)
+        request["constraints"]["horizon_sectors"] = []
+        self.assertEqual(validate_request(request), request)
 
     def test_sampled_windows_do_not_count_points_as_elapsed_intervals(self):
         times = [f"2025-01-15T14:0{i}:00" for i in range(6)]

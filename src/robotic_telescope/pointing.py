@@ -83,7 +83,8 @@ def validate_request(request):
     rule = request["constraints"]
     exact_keys(
         rule,
-        ["min_altitude_deg", "max_altitude_deg", "max_sun_altitude_deg", "min_sun_separation_deg"],
+        ["min_altitude_deg", "max_altitude_deg", "max_sun_altitude_deg", "min_sun_separation_deg"]
+        + (["horizon_sectors"] if isinstance(rule, dict) and "horizon_sectors" in rule else []),
     )
     number(rule["min_altitude_deg"], 0, 80)
     number(rule["max_altitude_deg"], 1, 85)
@@ -91,6 +92,16 @@ def validate_request(request):
         raise ValueError("Altitude limits must increase.")
     number(rule["max_sun_altitude_deg"], -18, -6)
     number(rule["min_sun_separation_deg"], 20, 180)
+    sectors = rule.get("horizon_sectors", [])
+    if not isinstance(sectors, list) or len(sectors) > 16:
+        raise ValueError("Provide at most sixteen horizon sectors.")
+    for sector in sectors:
+        exact_keys(sector, ["start_azimuth_deg", "end_azimuth_deg", "min_altitude_deg"])
+        start = number(sector["start_azimuth_deg"], 0, np.nextafter(360.0, 0.0))
+        end = number(sector["end_azimuth_deg"], 0, np.nextafter(360.0, 0.0))
+        number(sector["min_altitude_deg"], 0, 85)
+        if start == end:
+            raise ValueError("Horizon sector endpoints must differ; start>end wraps north.")
     targets = request["targets"]
     if not isinstance(targets, list) or not 1 <= len(targets) <= 32:
         raise ValueError("Provide one to thirty-two fixed ICRS targets.")
@@ -206,20 +217,41 @@ def coordinates(observer, targets, utc_strings):
         }
 
 
-def visibility_conditions(alt, sun_alt, sun_separation, rule):
+def horizon_floor(azimuth, rule):
+    azimuth = np.asarray(azimuth)
+    floor = np.full(azimuth.shape, -90.0)
+    for sector in rule.get("horizon_sectors", []):
+        start, end = sector["start_azimuth_deg"], sector["end_azimuth_deg"]
+        inside = (
+            (azimuth >= start) & (azimuth <= end)
+            if start < end
+            else ((azimuth >= start) | (azimuth <= end))
+        )
+        floor = np.where(inside, np.maximum(floor, sector["min_altitude_deg"]), floor)
+    return floor
+
+
+def visibility_conditions(alt, sun_alt, sun_separation, rule, azimuth=None):
     alt, sun_alt, sun_separation = np.asarray(alt), np.asarray(sun_alt), np.asarray(sun_separation)
-    return {
+    conditions = {
         "nonfinite": ~(np.isfinite(alt) & np.isfinite(sun_alt) & np.isfinite(sun_separation)),
         "below_min_altitude": alt < rule["min_altitude_deg"],
         "above_max_altitude": alt > rule["max_altitude_deg"],
         "sun_too_high": sun_alt > rule["max_sun_altitude_deg"],
         "near_sun": sun_separation < rule["min_sun_separation_deg"],
     }
+    if rule.get("horizon_sectors"):
+        azimuth = np.asarray(azimuth, dtype=float)
+        if azimuth.shape != alt.shape:
+            raise ValueError("Horizon checks require matching target azimuth samples.")
+        conditions["nonfinite"] |= ~np.isfinite(azimuth) | (azimuth < 0) | (azimuth >= 360)
+        conditions["below_horizon_mask"] = alt < horizon_floor(azimuth, rule)
+    return conditions
 
 
-def visibility(alt, sun_alt, sun_separation, rule):
+def visibility(alt, sun_alt, sun_separation, rule, azimuth=None):
     return ~np.logical_or.reduce(
-        list(visibility_conditions(alt, sun_alt, sun_separation, rule).values())
+        list(visibility_conditions(alt, sun_alt, sun_separation, rule, azimuth).values())
     )
 
 
@@ -257,10 +289,20 @@ def calculate_plan(request):
     rule = request["constraints"]
     for target in result["targets"]:
         alt = np.array(target["altitude_deg"])
-        mask = visibility(alt, result["sun_altitude_deg"], target["sun_separation_deg"], rule)
+        mask = visibility(
+            alt,
+            result["sun_altitude_deg"],
+            target["sun_separation_deg"],
+            rule,
+            target["azimuth_deg"],
+        )
         windows = sampled_windows(mask.tolist(), result["utc"], request["step_seconds"])
         conditions = visibility_conditions(
-            alt, result["sun_altitude_deg"], target["sun_separation_deg"], rule
+            alt,
+            result["sun_altitude_deg"],
+            target["sun_separation_deg"],
+            rule,
+            target["azimuth_deg"],
         )
         target["violations"] = {key: value.tolist() for key, value in conditions.items()}
         target["rejection_counts"] = {key: int(value.sum()) for key, value in conditions.items()}
