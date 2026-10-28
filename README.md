@@ -59,6 +59,8 @@ telescope-lab simulate --output artifacts/mount
 
 Start a custom request from [the bundled example](src/robotic_telescope/resources/demo-request.json). RA and Dec are **ICRS degrees**, longitude is east-positive WGS84 geodetic longitude, and start time must explicitly end in `Z`. The bounded format supports 1–32 fixed targets, up to 12 hours, and 30–300-second steps. There is no implicit local timezone, site lookup, live catalog, proper-motion input, or moving-planet target.
 
+An optional `constraints.horizon_sectors` array declares up to 16 azimuth sectors with raised altitude floors. See [the bounded example](docs/horizon-example.json) and [exact sector rules](docs/contract.md). A sector from 350° to 10° crosses north; endpoints count as inside, and overlapping sectors use the highest floor. Eligibility plots show the supplied floor, JSON/CSV retain the rejection reason, and sample/interval counts keep their existing meaning. These are user-supplied planning assumptions, not surveyed terrain or slew protection.
+
 Astropy handles time/frame transformations. The fixed IERS package's finite rows span **2 January 1973 to 4 October 2027**; the request format starts at year 2000. Each requested UT1 and polar-motion interpolation is checked separately, and unsupported times fail. Supported predicted values are labeled as predicted. The [metrics](demo/metrics.json) retain source/input/table hashes, dependency versions, exact range/status, and the active ERFA leap-second table. No out-of-range approximation is silently enabled.
 
 ## Development and verification

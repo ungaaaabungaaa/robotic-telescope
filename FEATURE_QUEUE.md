@@ -4,6 +4,6 @@ Delivered 28 October 2026: The mount simulator keeps the first latched fault rea
 
 Next useful work:
 - Compare coordinate references under a documented independent reference method.
-- Add bounded per-direction horizon constraints with explicit sample denominators.
+Delivered in the final round on 28 October 2026: optional bounded azimuth-sector horizon floors, including north wrap and overlap, explicit rejection reasons, plotted floors and unchanged sample/interval denominators.
 
 No physical telescope, motor operation or measured pointing accuracy has been verified.
