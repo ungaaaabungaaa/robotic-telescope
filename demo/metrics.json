@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "package_version": "0.1.0",
-  "created_utc": "2026-10-27T10:11:28.903573+00:00",
-  "source_sha256": "55d060faa137be8e5535534c953bb4b3ce5685165e0117a6629cd5bb768865f6",
+  "created_utc": "2026-10-28T02:44:48.740898+00:00",
+  "source_sha256": "5fb51d97231a6af9a04500bc914ec790902b6832622602c66aee5f259bfea872",
   "dependency_versions": {
     "numpy": "2.3.5",
     "astropy": "8.0.2",

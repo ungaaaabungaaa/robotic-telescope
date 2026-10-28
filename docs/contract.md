@@ -33,3 +33,5 @@ States: `unhomed`, `idle`, `slewing`, `tracking`, `fault`. Initial position is a
 ## Outputs and evidence
 
 Plan output includes exact input bytes/settings hashes, code digest, dependency/IERS provenance, timestamped Sun and target coordinates, eligibility masks, sampled windows/counts, and actual sky/altitude plots. Simulation output includes timestamped ideal positions/states/targets, fault reason, rate/travel checks, CSV/JSON trace, and actual plots. Demo combines these in static HTML with local relative figures. Generated README concept art is kept separate from computed plots. No physical telescope is presented as built or calibrated.
+
+The first simulated fault reason stays latched while mode is `fault`. Later valid fault events do not replace it or move the axes. Only explicit `clear_fault()` clears the reason and returns to `unhomed`; a new home declaration is still required for motion.

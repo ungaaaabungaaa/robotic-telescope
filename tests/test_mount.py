@@ -77,6 +77,23 @@ class MountTests(unittest.TestCase):
         mount.home()
         self.assertEqual(mount.mode, "idle")
 
+    def test_first_fault_reason_stays_latched_until_explicit_clear(self):
+        mount = Mount()
+        mount.home()
+        mount.goto(20, 10)
+        mount.step(1)
+        first = mount.inject_fault("simulated_limit_switch")
+        for reason in ["tracking_rate", "altitude_limit", "simulated_limit_switch"]:
+            self.assertEqual(mount.inject_fault(reason), first)
+        frozen = mount.step(1)
+        self.assertEqual(frozen["azimuth_deg"], first["azimuth_deg"])
+        self.assertEqual(frozen["altitude_deg"], first["altitude_deg"])
+        self.assertEqual(frozen["fault_reason"], "simulated_limit_switch")
+        mount.clear_fault()
+        self.assertEqual(mount.mode, "unhomed")
+        mount.inject_fault("new_fault_after_clear")
+        self.assertEqual(mount.fault_reason, "new_fault_after_clear")
+
     def test_scripted_simulation_is_reproducible_and_reports_real_model_bounds(self):
         rows, metrics = simulate()
         other, _ = simulate()
