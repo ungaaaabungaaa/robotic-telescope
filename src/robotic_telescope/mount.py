@@ -94,6 +94,8 @@ class Mount:
     def inject_fault(self, reason):
         if not isinstance(reason, str) or not 1 <= len(reason) <= 80:
             raise ValueError("A bounded fault reason is required.")
+        if self.mode == "fault":
+            return self.snapshot()
         self.fault_reason, self.mode, self.target = reason, "fault", None
         return self.snapshot()
 
